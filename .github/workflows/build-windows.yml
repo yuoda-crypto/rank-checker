@@ -1,0 +1,55 @@
+name: build-windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 依存パッケージをインストール
+        run: pip install pywebview playwright pykakasi pyinstaller
+
+      - name: ソースのままセルフテスト
+        run: python app.py --selftest
+
+      - name: PyInstallerでexe化
+        run: >
+          pyinstaller --noconfirm --noconsole --name RankChecker
+          --icon assets/app.ico
+          --collect-all playwright
+          --collect-all webview
+          --collect-all pykakasi
+          app.py
+
+      - name: UIとアセットを同梱
+        shell: pwsh
+        run: |
+          Copy-Item ui.html dist/RankChecker/
+          Copy-Item -Recurse assets dist/RankChecker/assets
+
+      - name: exeのセルフテスト
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath "dist/RankChecker/RankChecker.exe" -ArgumentList "--selftest" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Write-Error "selftest failed (exit $($p.ExitCode))"; exit 1 }
+
+      - name: 配布フォルダを組み立ててZIP化
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "package/順位チェッカーWin版" -Force | Out-Null
+          Copy-Item -Recurse dist/RankChecker "package/順位チェッカーWin版/app"
+          Copy-Item "packaging/セットアップ.bat" "package/順位チェッカーWin版/"
+          Copy-Item "packaging/はじめにお読みください.txt" "package/順位チェッカーWin版/"
+          Compress-Archive -Path "package/順位チェッカーWin版" -DestinationPath "rank-checker-win.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rank-checker-windows
+          path: rank-checker-win.zip

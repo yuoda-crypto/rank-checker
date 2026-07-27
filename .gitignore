@@ -1,0 +1,16 @@
+# 個人データ（計測結果・登録キーワード）は絶対にコミットしない
+*.csv
+dashboard.html
+
+# ブラウザプロファイル（Cookie等が入る）
+.chrome-profile/
+
+# 開発環境・ビルド生成物
+.venv/
+__pycache__/
+build/
+dist/
+*.spec
+配布/
+順位チェッカー.app/
+.DS_Store
