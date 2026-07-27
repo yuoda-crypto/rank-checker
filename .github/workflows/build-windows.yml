@@ -45,9 +45,16 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path "package/順位チェッカーWin版" -Force | Out-Null
           Copy-Item -Recurse dist/RankChecker "package/順位チェッカーWin版/app"
-          Copy-Item "packaging/セットアップ.bat" "package/順位チェッカーWin版/"
-          Copy-Item "packaging/はじめにお読みください.txt" "package/順位チェッカーWin版/"
-          Compress-Archive -Path "package/順位チェッカーWin版" -DestinationPath "rank-checker-win.zip"
+          # batは日本語Windowsのcmdが読めるようShift-JISに変換して同梱
+          $sjis = [System.Text.Encoding]::GetEncoding(932)
+          $bat = Get-Content -Raw -Encoding UTF8 "packaging/セットアップ.bat"
+          [System.IO.File]::WriteAllText("$PWD/package/順位チェッカーWin版/セットアップ.bat", $bat, $sjis)
+          # txtはメモ帳で確実に開けるようBOM付きUTF-8
+          $txt = Get-Content -Raw -Encoding UTF8 "packaging/はじめにお読みください.txt"
+          Set-Content -Path "package/順位チェッカーWin版/はじめにお読みください.txt" -Value $txt -Encoding utf8BOM -NoNewline
+          # 日本語ファイル名が化けないよう7-ZipでUTF-8フラグ付きZIPにする
+          cd package
+          7z a -tzip -mcu=on ../rank-checker-win.zip "順位チェッカーWin版"
 
       - uses: actions/upload-artifact@v4
         with:
