@@ -15,17 +15,25 @@ import webview
 
 IS_WIN = platform.system() == "Windows"
 
-# PyInstallerで固めた配布版はexeの隣、開発時はこのファイルの隣が基準
+# RESOURCE_DIR: ui.html等の同梱物の場所（配布版はexeの隣、開発時はこのファイルの隣）
+# DATA_DIR: CSVやChromeプロファイルの保存先。Mac配布版だけ.appの中に書き込めないので
+# Application Support配下に分離する（Windows配布版・開発時は従来どおり同じ場所）
 if getattr(sys, "frozen", False):
-    BASE_DIR = Path(sys.executable).parent
+    if platform.system() == "Darwin":
+        # .appの中: 実行ファイルはContents/MacOS、同梱物は署名ルール上Contents/Resourcesに置く
+        RESOURCE_DIR = Path(sys.executable).parent.parent / "Resources"
+        DATA_DIR = Path.home() / "Library" / "Application Support" / "RankChecker"
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+    else:
+        RESOURCE_DIR = DATA_DIR = Path(sys.executable).parent
 else:
-    BASE_DIR = Path(__file__).parent
-KEYWORDS_FILE = BASE_DIR / "keywords.csv"
-RESULTS_FILE = BASE_DIR / "results.csv"
-SERP_LOG_FILE = BASE_DIR / "serp_log.csv"
-COMPETITORS_FILE = BASE_DIR / "competitors.csv"
-UI_FILE = BASE_DIR / "ui.html"
-PROFILE_DIR = BASE_DIR / ".chrome-profile"
+    RESOURCE_DIR = DATA_DIR = Path(__file__).parent
+KEYWORDS_FILE = DATA_DIR / "keywords.csv"
+RESULTS_FILE = DATA_DIR / "results.csv"
+SERP_LOG_FILE = DATA_DIR / "serp_log.csv"
+COMPETITORS_FILE = DATA_DIR / "competitors.csv"
+UI_FILE = RESOURCE_DIR / "ui.html"
+PROFILE_DIR = DATA_DIR / ".chrome-profile"
 
 MAX_RANK = 9  # 取得は1〜9位固定。9位以内に見つからなければ圏外
 MAX_PER_RUN = 5  # 1回の実行でチェックする最大キーワード数（少量ペースでブロック回避）
@@ -687,7 +695,7 @@ def main():
 def selftest():
     # CIビルド後の動作確認用（画面は開かずに主要機能を通す）
     assert UI_FILE.exists(), "ui.html が見つからない"
-    assert (BASE_DIR / "assets" / "clawd-coral2.gif").exists(), "assets が見つからない"
+    assert (RESOURCE_DIR / "assets" / "clawd-coral2.gif").exists(), "assets が見つからない"
     assert reading_of("順位確認") == "じゅんいかくにん"
     state = build_state()
     assert "entries" in state and "competitors" in state

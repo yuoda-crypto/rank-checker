@@ -73,7 +73,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "${{ github.ref_name }}"
-          gh release create $tag rank-checker-win.zip --title "順位チェッカー $tag" --notes "Windows版。ZIPを展開して「セットアップ.bat」を実行してください。詳しくは同梱の「はじめにお読みください.txt」へ。"
+          gh release create $tag rank-checker-win.zip --title "順位チェッカー $tag" --notes "Windows版: rank-checker-win.zip を展開して「セットアップ.bat」を実行。Mac版(Apple Silicon): rank-checker-mac.zip を展開して「順位チェッカー.app」を右クリック→開く。詳しくは各ZIP同梱の「はじめにお読みください.txt」へ。"
           if ($LASTEXITCODE -ne 0) {
             gh release upload $tag rank-checker-win.zip --clobber
           }

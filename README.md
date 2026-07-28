@@ -5,16 +5,27 @@ Googleの検索順位（1〜9位）を毎日かんたんに記録できるデス
 
 ![macOS](https://img.shields.io/badge/macOS-対応-blue) ![Windows](https://img.shields.io/badge/Windows%2010%2F11-対応-blue)
 
-## ダウンロード（Windows）
+## ダウンロード
 
-**[Releasesページ](../../releases/latest)** から `rank-checker-win.zip` をダウンロード。
+**[Releasesページ](../../releases/latest)** から自分のOS用のZIPをダウンロード。
+
+### Windows 10 / 11
+
+`rank-checker-win.zip` をダウンロード。
 
 1. ZIPを右クリック →「すべて展開」
 2. `セットアップ.bat` をダブルクリック
    - 「WindowsによってPCが保護されました」と出たら「詳細情報」→「実行」
 3. デスクトップにできた「順位チェッカー」から起動
 
-詳しくは同梱の「はじめにお読みください.txt」へ。
+### Mac（Apple Silicon）
+
+`rank-checker-mac.zip` をダウンロードして展開。
+
+1. 「順位チェッカー.app」をアプリケーションフォルダへドラッグ
+2. 右クリック →「開く」（開けないときは「システム設定」→「プライバシーとセキュリティ」→「このまま開く」）
+
+詳しくは各ZIP同梱の「はじめにお読みください.txt」へ。
 
 ## 主な機能
 
@@ -40,7 +51,7 @@ python -m venv .venv
 .venv/bin/python app.py
 ```
 
-Windows配布用ビルドは `v*` タグをpushするとGitHub Actionsが自動でReleasesに添付します。
+配布用ビルド（Windows / Mac）は `v*` タグをpushするとGitHub Actionsが自動でReleasesに添付します。
 
 ## クレジット
 
