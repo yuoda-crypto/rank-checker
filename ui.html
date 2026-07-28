@@ -357,6 +357,10 @@
       <div class="sub" id="last-checked">最終チェック: —</div>
     </div>
     <div class="actions">
+      <button class="btn" id="btn-csv" title="全キーワードの順位履歴をCSVで保存">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+        CSV出力
+      </button>
       <button class="btn" id="btn-comp">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         競合ウォッチ
@@ -458,6 +462,7 @@ const ICONS = {
   edit: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
   trash: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>',
   close: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  dl: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>',
 };
 
 let state = { entries: [], competitors: [], last_checked: null, running: false,
@@ -598,6 +603,7 @@ function render() {
   const runBtn = $("#btn-run");
   runBtn.disabled = state.running || entries.length === 0;
   $("#btn-run-label").textContent = state.running ? "実行中…" : "チェック実行";
+  $("#btn-csv").disabled = !entries.some((e) => e.series.length > 0);
 
   $("#toolbar").hidden = entries.length === 0;
   applyFilter();
@@ -900,6 +906,7 @@ function openDetail(index) {
         <div class="url-sub"><button class="linklike ext-link" data-url="${esc(e.url)}" title="ブラウザで開く">${esc(e.url)}</button></div>
         ${e.location ? `<span class="loc-chip" style="margin: 6px 0 0;">${ICONS.pin}${esc(e.location)}から検索</span>` : ""}
       </div>
+      ${e.series.length ? `<button class="icon-btn" id="d-csv" aria-label="このキーワードの履歴をCSVで保存" title="CSVで保存">${ICONS.dl}</button>` : ""}
       <button class="icon-btn" id="m-close" aria-label="閉じる">${ICONS.close}</button>
     </div>
     ${e.memo ? `<div class="memo-box">${esc(e.memo)}</div>` : ""}
@@ -908,6 +915,15 @@ function openDetail(index) {
     ${serpHtml}
   </div>`);
   $("#m-close").onclick = closeModal;
+
+  const dcsv = $("#d-csv");
+  if (dcsv) dcsv.onclick = async () => {
+    dcsv.disabled = true;
+    const res = await api.export_keyword_csv(index);
+    dcsv.disabled = false;
+    if (res.ok) toast(`「${res.name}」を保存したよ`);
+    else if (res.error) toast(res.error);
+  };
 
   document.querySelectorAll("#modal-root .ext-link").forEach((el) => {
     el.addEventListener("click", (ev) => {
@@ -1225,6 +1241,18 @@ function toast(msg) {
 $("#btn-add").addEventListener("click", () => openForm(null));
 $("#btn-add-empty").addEventListener("click", () => openForm(null));
 $("#btn-comp").addEventListener("click", openCompetitors);
+$("#btn-csv").addEventListener("click", async () => {
+  const btn = $("#btn-csv");
+  btn.disabled = true;
+  const res = await api.export_all_csv();
+  btn.disabled = false;
+  if (res.ok) {
+    toast(`「${res.name}」を保存したよ`);
+    clawdSay("CSVお届け！分析がんばって！", 4500, "idea");
+  } else if (res.error) {
+    toast(res.error);
+  }
+});
 $("#search").addEventListener("input", (ev) => { query = ev.target.value; applyFilter(); });
 $("#search-clear").addEventListener("click", () => {
   query = "";

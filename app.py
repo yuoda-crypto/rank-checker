@@ -2,6 +2,7 @@ import csv
 import json
 import platform
 import random
+import re
 import sys
 import threading
 import time
@@ -185,6 +186,39 @@ def append_csv(path, header, rows):
         if is_new:
             writer.writerow(header)
         writer.writerows(rows)
+
+
+def sanitize_filename(name):
+    return re.sub(r'[\\/:*?"<>|\r\n]+', "_", str(name)).strip()[:60] or "export"
+
+
+def all_csv_rows(entries):
+    # 行=日付 × 列=キーワードのマトリクス。2行目に対象URL、未計測日は空欄
+    entries = [e for e in entries if e["series"]]
+    dates = sorted({p["date"] for e in entries for p in e["series"]})
+    maps = [{p["date"]: p["rank"] for p in e["series"]} for e in entries]
+    labels = [e["keyword"] + (f"（{e['location']}）" if e["location"] else "")
+              for e in entries]
+    rows = [["日付"] + labels, ["URL"] + [e["url"] for e in entries]]
+    for d in dates:
+        row = [d]
+        for m in maps:
+            row.append(("圏外" if m[d] is None else m[d]) if d in m else "")
+        rows.append(row)
+    return rows
+
+
+def keyword_csv_rows(entry):
+    rivals = entry["rivals"]
+    rmaps = [{p["date"]: p["rank"] for p in rv["series"]} for rv in rivals]
+    rows = [["日付", "順位"] + [f"競合: {rv['name']}" for rv in rivals]]
+    for p in entry["series"]:
+        row = [p["date"], "圏外" if p["rank"] is None else p["rank"]]
+        for m in rmaps:
+            row.append(("圏外" if m[p["date"]] is None else m[p["date"]])
+                       if p["date"] in m else "")
+        rows.append(row)
+    return rows
 
 
 def _check_blocked(page):
@@ -382,6 +416,48 @@ class Api:
             webbrowser.open(url)
             return {"ok": True}
         return {"ok": False}
+
+    def _save_csv(self, default_name, rows):
+        try:
+            path = self.window.create_file_dialog(
+                webview.SAVE_DIALOG,
+                directory=str(Path.home() / "Downloads"),
+                save_filename=default_name,
+                file_types=("CSVファイル (*.csv)",))
+        except Exception as e:
+            return {"ok": False, "error": f"保存ダイアログを開けなかったよ: {str(e)[:80]}"}
+        if isinstance(path, (list, tuple)):
+            path = path[0] if path else None
+        if not path:
+            return {"ok": False}  # キャンセル
+        path = str(path)
+        if not path.lower().endswith(".csv"):
+            path += ".csv"
+        try:
+            # Excelで開いても文字化けしないようBOM付きUTF-8で書く
+            with open(path, "w", newline="", encoding="utf-8-sig") as f:
+                csv.writer(f).writerows(rows)
+        except Exception as e:
+            return {"ok": False, "error": f"保存に失敗したよ: {str(e)[:80]}"}
+        return {"ok": True, "name": Path(path).name}
+
+    def export_all_csv(self):
+        entries = [e for e in build_state()["entries"] if e["series"]]
+        if not entries:
+            return {"ok": False, "error": "まだ計測データがないよ。先にチェック実行してね"}
+        fname = f"順位まとめ_{date.today().strftime('%Y%m%d')}.csv"
+        return self._save_csv(fname, all_csv_rows(entries))
+
+    def export_keyword_csv(self, index):
+        entries = build_state()["entries"]
+        if not (0 <= index < len(entries)):
+            return {"ok": False, "error": "対象が見つからなかったよ"}
+        e = entries[index]
+        if not e["series"]:
+            return {"ok": False, "error": "このキーワードはまだ計測データがないよ"}
+        label = e["keyword"] + (f"（{e['location']}）" if e["location"] else "")
+        fname = f"順位_{sanitize_filename(label)}_{date.today().strftime('%Y%m%d')}.csv"
+        return self._save_csv(fname, keyword_csv_rows(e))
 
     def add_keyword(self, keyword, url, location="", memo=""):
         keyword, url = keyword.strip(), url.strip()
@@ -615,6 +691,13 @@ def selftest():
     assert reading_of("順位確認") == "じゅんいかくにん"
     state = build_state()
     assert "entries" in state and "competitors" in state
+    rows = all_csv_rows(state["entries"])
+    assert rows[0][0] == "日付" and rows[1][0] == "URL"
+    for e in state["entries"]:
+        if e["series"]:
+            assert keyword_csv_rows(e)[0][:2] == ["日付", "順位"]
+            break
+    assert sanitize_filename('a/b:c?') == "a_b_c_"
     from playwright.sync_api import sync_playwright  # import可能かだけ確認
     print("SELFTEST OK")
 
