@@ -707,6 +707,8 @@ def selftest():
             break
     assert sanitize_filename('a/b:c?') == "a_b_c_"
     from playwright.sync_api import sync_playwright  # import可能かだけ確認
+    if IS_WIN:
+        import webview.platforms.winforms  # pythonnet(.NET連携)が読み込めるか確認
     print("SELFTEST OK")
 
 
