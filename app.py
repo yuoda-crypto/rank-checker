@@ -13,6 +13,8 @@ from urllib.parse import quote_plus
 
 import webview
 
+VERSION = "1.2.2"
+
 IS_WIN = platform.system() == "Windows"
 
 # RESOURCE_DIR: ui.html等の同梱物の場所（配布版はexeの隣、開発時はこのファイルの隣）
@@ -677,11 +679,29 @@ class Api:
 
 
 def main():
+    if IS_WIN:
+        # .NET(pythonnet)が読み込めない環境では、素のtracebackでなく日本語の案内を出す
+        try:
+            import webview.platforms.winforms  # noqa: F401
+        except Exception:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(
+                None,
+                "アプリの部品（.NET）の読み込みに失敗しました。\n\n"
+                "【直しかた】\n"
+                "1. ダウンロードしたZIPを右クリック→「プロパティ」\n"
+                "2. 下のほうの「セキュリティ:」にある「許可する」にチェック→OK\n"
+                "3. ZIPを展開し直して「セットアップ.bat」をもう一度実行\n\n"
+                "それでも直らない場合は、会社PCのセキュリティ設定が原因の\n"
+                "可能性があります。この画面のスクリーンショットを添えて\n"
+                "配布者に連絡してください。",
+                f"順位チェッカー v{VERSION} - 起動エラー", 0x10)
+            return
     for path in (KEYWORDS_FILE, RESULTS_FILE, SERP_LOG_FILE):
         ensure_location_column(path)
     api = Api()
     window = webview.create_window(
-        "順位チェッカー",
+        f"順位チェッカー v{VERSION}",
         str(UI_FILE),
         js_api=api,
         width=1180,
