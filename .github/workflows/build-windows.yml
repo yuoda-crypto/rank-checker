@@ -41,10 +41,12 @@ jobs:
           # ブロック属性付きDLLでも.NETが読み込めるようにするconfig（起動失敗の根本対策）
           Copy-Item packaging/RankChecker.exe.config dist/RankChecker/
 
-      - name: ダウンロード直後の状態を再現（全ファイルにブロック属性を付与）
+      - name: ダウンロード直後の状態を再現（ブロック属性を付与）
         shell: pwsh
         run: |
-          Get-ChildItem -Recurse -File dist/RankChecker | ForEach-Object {
+          # exe自体は実ユーザーがSmartScreenを手動突破する部分なので除外し、
+          # 「DLLがブロックされたまま」という実際の失敗状態を再現する
+          Get-ChildItem -Recurse -File dist/RankChecker | Where-Object { $_.Extension -ne ".exe" } | ForEach-Object {
             Set-Content -Path $_.FullName -Stream Zone.Identifier -Value "[ZoneTransfer]`nZoneId=3"
           }
 
